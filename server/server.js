@@ -17,7 +17,7 @@ const service = function (conn) {
             connPool.push(newConn)
         } else if (mess.code === 10) {
             console.log(mess.name + "发消息给" + mess.target + "\n");
-            let connection = single(mess.target, connPool);
+            let connection =  single(mess.target, connPool);
             console.log(connection)
             connection.sendText(`{"content":"${mess.text}"}`)
         } else {
