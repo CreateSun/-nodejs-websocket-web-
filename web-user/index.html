@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="media.css">
+    <title>简易聊天室</title>
+</head>
+
+<body>
+    <div class="client">
+        当前在线人数为
+        <span id="client-num">0</span>
+    </div>
+    <div class="colthes">
+        <div class="content-border">
+            <h1>简易聊天室</h1>
+            <div class="content-inner">
+                <div class="content" id="inner">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-top">
+        <div class="setName">
+            <input type="text" id="name" placeholder="请先设置姓名" autocomplete="off">
+            <input type="text" id="target" placeholder="发消息给" autocomplete="off">
+            <button class="confirmName" value="确定" onclick="setNameTarget()">确定</button>
+
+        </div>
+        <textarea cols="30" rows="50" type="text" id="text" onkeydown="enter()" placeholder="输入信息以发送"></textarea>
+        <input type="button" value="发送消息" id="send" onclick="send()">
+    </div>
+
+
+    <div id="toast">
+
+    </div>
+
+</body>
+<script>
+    let enter = function () {
+        if (event.keyCode == 13) {
+            send()
+        }
+    }
+
+    let setNameTarget = function () {
+        let name = document.getElementById('name');
+        let target = document.getElementById('target');
+        let btn = document.getElementsByClassName('confirmName')[0];
+        if (btn.innerHTML == "更改") {
+            name.removeAttribute('disabled');
+            btn.innerHTML = "确定";
+            ws.close()
+        } else if (name.value !== '') {
+            name.setAttribute('disabled', 'true')
+            let msg = {
+                code: 1,  // code =1 表示广播建立连接
+                name: name.value,
+                text: "",
+            }
+            setConnection(msg)
+            name.style.opacity = 0.5
+            btn.innerHTML = "更改"
+        }
+    }
+
+    let toast = function (plain) {
+        let toast = document.getElementById('toast');
+
+        toast.innerHTML = plain
+
+        toast.className = 'toast'
+        setTimeout(function () {
+            toast.className = 'toastPre'
+        }
+            , 1000
+        )
+    }
+
+    let send = function () {
+        var text = document.getElementById('text').value.replace(" ", "").replace("\n", "")
+        let name = document.getElementById('name')
+        let target = document.getElementById('target');
+        if (text != "" && name.value != "") {
+            let msg = {
+                code: 10, //表示单聊
+                name: name.value,
+                text,
+                target: target.value
+            }
+            // ws.onopen = function () {
+                // ws.setTarget()
+            ws.send(JSON.stringify(msg));
+            // }
+            document.getElementById('text').value = ""
+        } else {
+            toast("内容或名字不能为空！")
+        }
+    }
+
+    let setConnection = function (msg) {
+        ws = new WebSocket('ws://localhost:443');
+        //todo 121.199.56.197
+        ws.onmessage = function (e) {
+            console.log(e)
+            let data = JSON.parse(e.data)
+            if (data.client) {
+                let inner = document.getElementById('client-num')
+                inner.innerHTML = data.client
+            } else if (data.content){
+               let inner = document.getElementById('inner')
+                inner.innerHTML += data.content
+               
+                // if(window.screen.width <= 600) {
+                    inner.scrollTop += 100
+                // } else {  
+                    // inner.scrollTop += 40
+                // } 
+            }
+        }
+        ws.onopen = function () {
+            ws.send(JSON.stringify(msg))
+        }
+
+    }
+
+</script>
+
+</html>
