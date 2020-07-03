@@ -11,49 +11,58 @@
 </head>
 
 <body>
-    <div class="client">
-        当前在线人数为
-        <span id="client-num">0</span>
-    </div>
-    <div class="colthes">
-        <div class="content-border">
-            <h1>简易聊天室</h1>
-            <div class="content-inner">
-                <div class="content" id="inner">
-                </div>
+<div class="client">
+    当前在线人数为
+    <span id="client-num">0</span>
+</div>
+<div class="colthes">
+    <div class="content-border">
+        <h1>简易聊天室</h1>
+        <div class="content-inner">
+            <div class="content" id="inner">
             </div>
         </div>
     </div>
+</div>
+<!--<aside>-->
+<!--    <details>-->
+<!--        <summary>联系人列表</summary>-->
+<!--        <p class="contact">小明</p>-->
+<!--        <p class="contact">小蓝</p>-->
+<!--        <p class="contact">小黄</p>-->
+<!--        <p class="contact">小美</p>-->
+<!--    </details>-->
+<!--</aside>-->
 
-    <div class="bottom-top">
-        <div class="setName">
-            <input type="text" id="name" placeholder="请先设置姓名" autocomplete="off">
-            <input type="text" id="target" placeholder="发消息给" autocomplete="off">
-            <button class="confirmName" value="确定" onclick="setNameTarget()">确定</button>
-
-        </div>
-        <textarea cols="30" rows="50" type="text" id="text" onkeydown="enter()" placeholder="输入信息以发送"></textarea>
-        <input type="button" value="发送消息" id="send" onclick="send()">
+<div class="bottom-top">
+    <div class="setName">
+        <input type="text" id="name" placeholder="请先设置姓名" autocomplete="off">
+        <input type="text" id="target" placeholder="发消息给" autocomplete="off">
+        <button class="confirmName" value="确定" onclick="setNameTarget()">确定</button>
     </div>
+    <textarea cols="30" rows="50" type="text" id="text" onkeydown="enter()" placeholder="输入信息以发送"></textarea>
+    <input type="button" value="发送消息" id="send" onclick="send()">
+</div>
+<div id="toast">
 
-
-    <div id="toast">
-
-    </div>
+</div>
 
 </body>
+<script src="./util.js"></script>
 <script>
+    let ws;
     let enter = function () {
-        if (event.keyCode == 13) {
+        if (event.keyCode === 13) {
             send()
+            event.preventDefault();
         }
     }
 
     let setNameTarget = function () {
         let name = document.getElementById('name');
-        let target = document.getElementById('target');
+        let target = $('#target');
         let btn = document.getElementsByClassName('confirmName')[0];
-        if (btn.innerHTML == "更改") {
+        if (btn.innerHTML === "更改") {
             name.removeAttribute('disabled');
             btn.innerHTML = "确定";
             ws.close()
@@ -77,25 +86,34 @@
 
         toast.className = 'toast'
         setTimeout(function () {
-            toast.className = 'toastPre'
-        }
-            , 1000
+                toast.className = 'toastPre'
+            }, 1000
         )
+    }
+
+    let takeAvatar = function (str, text, direct) {
+        let s = str.substr(0,1);
+        let color = '#' + ('00000' + (Math.random() * 0x1000000 << 0).toString(16)).substr(-6);
+        return  `<div class="flex" style="flex-direction: ${direct === "right"? "row-reverse": "row"}">
+                      <div class="avatar" style="background-color:${color}">${s}</div>
+                      <p style="text-align: right">${text}</p>
+                 </div>`
     }
 
     let send = function () {
         var text = document.getElementById('text').value.replace(" ", "").replace("\n", "")
         let name = document.getElementById('name')
         let target = document.getElementById('target');
-        if (text != "" && name.value != "") {
+        if (text !== "" && name.value !== "") {
             let msg = {
                 code: 10, //表示单聊
                 name: name.value,
                 text,
                 target: target.value
             }
-            // ws.onopen = function () {
-                // ws.setTarget()
+            let inner = document.getElementById('inner')
+            inner.innerHTML += takeAvatar(msg.name, msg.text, "right")
+            inner.scrollTop += 100
             ws.send(JSON.stringify(msg));
             // }
             document.getElementById('text').value = ""
@@ -113,15 +131,14 @@
             if (data.client) {
                 let inner = document.getElementById('client-num')
                 inner.innerHTML = data.client
-            } else if (data.content){
-               let inner = document.getElementById('inner')
-                inner.innerHTML += data.content
-               
-                // if(window.screen.width <= 600) {
-                    inner.scrollTop += 100
-                // } else {  
-                    // inner.scrollTop += 40
-                // } 
+            } else if (data.notice) {
+                let inner = document.getElementById('inner')
+                inner.innerHTML += data.notice
+                inner.scrollTop += 100
+            }else if (data.content) {
+                let inner = document.getElementById('inner')
+                inner.innerHTML += takeAvatar(data.name, data.content, "left");
+                inner.scrollTop += 100
             }
         }
         ws.onopen = function () {

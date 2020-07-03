@@ -1,14 +1,19 @@
 const ws = require('nodejs-websocket');
 
-const connPool = [];
+//在线用户连接池
+let connPool = [];
+//所有用户连接池
+let userPool = [];
+//群组连接池
+let groupPool = [];
 
 const service = function (conn) {
     conn.on('text', function (mess) {
         mess = JSON.parse(mess);
         if (mess.code === 1) {
             let message = '<p style=\\"font-size: 10px; color: grey; text-align: center\\">' +
-                mess.name + "加入了聊天 </p>";
-            boardCast(`{"content":"${message}"}`);
+                mess.name + "登录成功 </p>";
+            boardCast(`{"notice":"${message}"}`);
             // 创建连接对象 保存自己的信息
             let newConn = {
                 name: mess.name,
@@ -16,13 +21,9 @@ const service = function (conn) {
             };
             connPool.push(newConn)
         } else if (mess.code === 10) {
-            console.log(mess.name + "发消息给" + mess.target + "\n");
-            let connection =  single(mess.target, connPool);
-            console.log(connection)
-            connection.sendText(`{"content":"${mess.text}"}`)
-        } else {
-            let message = '<p>' + mess.name + ":" + mess.text + '</p>';
-            boardCast(`{"content":"${message}"}`)
+            let connection = single(mess.target, connPool);
+            connection.code === 200 && connection.conn.sendText(`{"content":"${mess.text}", "name": "${mess.name}"}`);
+            connection.code === 404 && boardCast(`{"notice": "<p style='font-size: 10px; color: grey; text-align: center'>消息发送失败</p>"}`)
         }
     });
     conn.on('connection', function (conn) {
@@ -48,12 +49,16 @@ const server = ws.createServer(function (conn) {
  * @param {*} pool
  */
 let single = function (target, pool) {
-    let targetConn = null;
+    let targetConn = {
+        code: 403,
+        conn: null,
+    };
     pool.forEach(function (conn, index) {
         if (conn.name === target) {
-            console.log(conn.conn)
-            targetConn = conn.conn
+            targetConn.code = 200;
+            targetConn.conn = conn.conn;
         }
+        if (index===pool.length-1 && targetConn.code === 403) targetConn.code = 404;
     });
     return targetConn;
 };
@@ -65,6 +70,5 @@ let single = function (target, pool) {
 let boardCast = function (str) {
     server.connections.forEach(function (conn, index) {
         conn.sendText(str)
-        // console.log(connPool[0] && connPool[0].conn)
     })
 };
